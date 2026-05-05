@@ -105,6 +105,14 @@ public class waterIce : MonoBehaviour
             else
             {
                 secondButton.gameObject.SetActive(false);
+                if (gatheringCrystals.CheckCrystals())
+                {
+                    firstButton.gameObject.SetActive(true);
+                }
+                else
+                {
+                    firstButton.gameObject.SetActive(false);
+                }
             }
             isFreezing = false;
             isMelting = false;

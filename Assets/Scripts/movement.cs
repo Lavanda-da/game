@@ -16,8 +16,11 @@ public class movement : MonoBehaviour
     [SerializeField] private float rotationSpeed = 10f;    // Скорость поворота
 
     [Header("Адаптация к поверхности")]
-    [SerializeField] private LayerMask groundLayer;  // Слой земли
-    [SerializeField] private float rayDistance = 0.8f;      // Длина луча вниз
+    [SerializeField] private LayerMask groundLayer;
+    [SerializeField] private float rayDistance = 2f;
+
+    [Header("Скатывание")]
+    [SerializeField] private float slideForce = 12f;
 
     private Rigidbody rb;
     private Vector3 moveInput;
@@ -32,10 +35,6 @@ public class movement : MonoBehaviour
         rb.freezeRotation = true;
 
         rb.mass = mass;
-
-        // ������ ���� �������������
-        rb.linearDamping = 0f;
-        rb.angularDamping = 0f;
     }
 
     void Update()
@@ -61,42 +60,47 @@ public class movement : MonoBehaviour
     {
         if (moveInput != Vector3.zero)
         {
+            float slopeAngle = 0f; ;
+            RaycastHit hit;
+            if (Physics.Raycast(transform.position, -transform.up, out hit, rayDistance, groundLayer))
+            {
+                slopeAngle = Vector3.Angle(hit.normal, Vector3.up);
+            }
+            Debug.Log($"{slopeAngle}");
+
+            Vector3 slideDirection = Vector3.zero;
+            if (Physics.Raycast(transform.position, -transform.up, out hit, rayDistance, groundLayer))
+            {
+                    slideDirection = Vector3.ProjectOnPlane(Vector3.down, hit.normal).normalized;
+            }
+
+            string tag = hit.collider.gameObject.tag;
+            if (slopeAngle > 5f && tag == "Ice")
+            {
+                float slideStrength = Mathf.Sin(slopeAngle * Mathf.Deg2Rad) * slideForce;
+                // Debug.Log($"{slideStrength} : {slideDirection.x} {slideDirection.y} {slideDirection.z}");
+                rb.AddForce(slideDirection * slideStrength, ForceMode.Force);
+            }
+
             Vector3 moveDirection = transform.TransformDirection(moveInput);
-            moveDirection.y = 0;  // Убираем вертикальную составляющую
-            moveDirection.Normalize();  // Нормализуем для сохранения скорости
+            moveDirection.Normalize();
 
-            // a = F / m
-            float acceleration = force / mass;
+            Vector3 forceVector = moveDirection * force;
+            rb.AddForce(forceVector, ForceMode.Force);
 
-            // V = V + a * dt (����������� ��������)
-            currentVelocity = Vector3.MoveTowards(
-                currentVelocity,
-                moveDirection * maxSpeed,
-                acceleration * Time.fixedDeltaTime
-            );
+            Vector3 velocity = new Vector3(rb.linearVelocity.x, rb.linearVelocity.y, rb.linearVelocity.z);
+            if (velocity.magnitude > maxSpeed)
+            {
+                Vector3 limitedVelocity = velocity.normalized * maxSpeed;
+                rb.linearVelocity = new Vector3(limitedVelocity.x, limitedVelocity.y, limitedVelocity.z);
+            }
         }
-        else
-        {
-            float deceleration = force / mass;
-
-            // V = V - a * dt (��������� �������� �� ����)
-            currentVelocity = Vector3.MoveTowards(
-                currentVelocity,
-                Vector3.zero,
-                deceleration * Time.fixedDeltaTime
-            );
-        }
-
-        // ��������� ��������
-        Vector3 newVelocity = currentVelocity;
-        newVelocity.y = rb.linearVelocity.y;
-        rb.linearVelocity = newVelocity;
     }
 
     private Quaternion GetGroundRotation()
     {
         RaycastHit hit;
-        if (Physics.Raycast(transform.position, Vector3.down, out hit, rayDistance, groundLayer))
+        if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.down), out hit, rayDistance, groundLayer))
         {
             Quaternion targetRotation = Quaternion.FromToRotation(Vector3.up, hit.normal);
             return targetRotation;

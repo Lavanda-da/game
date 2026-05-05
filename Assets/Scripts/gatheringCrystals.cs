@@ -41,4 +41,10 @@ public class gatheringCrystals : MonoBehaviour
         crystalCount -= threshold;
         crystalText.text = $"Кол-во кристаллов: {crystalCount}";
     }
+
+    public bool CheckCrystals ()
+    {
+        if (crystalCount > 0) return true;
+        return false;
+    }
 }

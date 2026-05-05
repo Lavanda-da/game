@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Fire
   - Crystal
+  - Ice
   layers:
   - Default
   - TransparentFX
